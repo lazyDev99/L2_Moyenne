@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<meta name="theme-color" content="#f5f4f0"/>
+<title>Grade Calculator — L2 S4</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist+Mono:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg:      #f5f4f0;
+    --surface: #ffffff;
+    --border:  #e2e0d8;
+    --border2: #d0cdc3;
+    --ink:     #1a1916;
+    --muted:   #8a877e;
+    --accent:  #2563a8;
+    --pass:    #1a7a4a;
+    --fail:    #b83232;
+    --pass-bg: #edf7f2;
+    --fail-bg: #fdf2f2;
+    --tag-bg:  #eeecea;
+    --r:       12px;
+    --sh:      0 1px 3px rgba(0,0,0,.07), 0 4px 16px rgba(0,0,0,.05);
+    --sh-lg:   0 4px 24px rgba(0,0,0,.10), 0 1px 4px rgba(0,0,0,.06);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Geist Mono', monospace;
+    min-height: 100vh;
+    padding-bottom: calc(110px + env(safe-area-inset-bottom, 0px));
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Header */
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: clamp(14px,4vw,26px) clamp(14px,5vw,28px);
+    position: sticky; top: 0; z-index: 200;
+    box-shadow: 0 1px 0 var(--border), 0 2px 8px rgba(0,0,0,.04);
+  }
+  .hdr {
+    max-width: 660px; margin: 0 auto;
+    display: flex; align-items: baseline;
+    justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  }
+  header h1 {
+    font-family: 'Instrument Serif', serif;
+    font-size: clamp(1.2rem,4vw,1.55rem);
+    font-weight: 400; letter-spacing: -.2px;
+  }
+  header h1 em { font-style: italic; color: var(--accent); }
+
+  .dot-live {
+    display: flex; align-items: center; gap: 6px;
+    font-size: .67rem; color: var(--muted); letter-spacing: .4px;
+  }
+  .dot-live::before {
+    content: ''; width: 7px; height: 7px;
+    background: var(--pass); border-radius: 50%;
+    animation: breathe 2.4s ease-in-out infinite;
+  }
+  @keyframes breathe {
+    0%,100% { opacity:1; transform:scale(1); }
+    50%     { opacity:.25; transform:scale(.6); }
+  }
+
+  /* Main */
+  main {
+    max-width: 660px; margin: 0 auto;
+    padding: clamp(18px,4vw,28px) clamp(12px,4vw,20px) 24px;
+  }
+
+  .sec-label {
+    font-size: .62rem; font-weight: 600;
+    letter-spacing: 1.8px; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 12px; padding-left: 2px;
+  }
+
+  /* Module Card */
+  .module-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--r);
+    margin-bottom: 10px;
+    box-shadow: var(--sh);
+    overflow: hidden;
+    transition: box-shadow .2s, border-color .2s;
+    opacity: 0;
+    animation: rise .32s ease forwards;
+  }
+  .module-card:hover { box-shadow: var(--sh-lg); border-color: var(--border2); }
+
+  @keyframes rise {
+    from { opacity:0; transform:translateY(10px); }
+    to   { opacity:1; transform:translateY(0); }
+  }
+  .module-card:nth-child(1)  { animation-delay:.02s }
+  .module-card:nth-child(2)  { animation-delay:.05s }
+  .module-card:nth-child(3)  { animation-delay:.08s }
+  .module-card:nth-child(4)  { animation-delay:.11s }
+  .module-card:nth-child(5)  { animation-delay:.14s }
+  .module-card:nth-child(6)  { animation-delay:.17s }
+  .module-card:nth-child(7)  { animation-delay:.20s }
+  .module-card:nth-child(8)  { animation-delay:.23s }
+  .module-card:nth-child(9)  { animation-delay:.26s }
+  .module-card:nth-child(10) { animation-delay:.29s }
+  .module-card:nth-child(11) { animation-delay:.32s }
+  .module-card:nth-child(12) { animation-delay:.35s }
+
+  .card-top {
+    display: flex; align-items: flex-start;
+    justify-content: space-between;
+    padding: 14px 16px 10px; gap: 10px;
+  }
+  .mod-name {
+    font-family: 'Instrument Serif', serif;
+    font-size: clamp(.88rem,2.5vw,.98rem);
+    line-height: 1.35; flex: 1;
+  }
+  .coef-tag {
+    font-size: .63rem; font-weight: 500; color: var(--muted);
+    background: var(--tag-bg); border-radius: 20px;
+    padding: 3px 9px; white-space: nowrap; flex-shrink: 0; margin-top: 2px;
+  }
+
+  .card-inputs {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 10px; padding: 0 16px 14px;
+  }
+  .card-inputs.solo { grid-template-columns: 1fr; }
+
+  .inp-group { display: flex; flex-direction: column; gap: 5px; }
+  .inp-group label {
+    font-size: .6rem; letter-spacing: 1px;
+    text-transform: uppercase; color: var(--muted); font-weight: 500;
+  }
+  .inp-group label .w { color: var(--accent); font-weight: 600; margin-left: 4px; }
+
+  .score-in {
+    background: var(--bg);
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    color: var(--ink);
+    font-family: 'Geist Mono', monospace;
+    font-size: clamp(1rem,3vw,1.12rem);
+    font-weight: 500;
+    padding: clamp(10px,2.5vw,13px) 14px;
+    width: 100%; min-height: 50px;
+    transition: border-color .18s, box-shadow .18s, background .18s;
+    -moz-appearance: textfield; appearance: textfield;
+  }
+  .score-in::-webkit-outer-spin-button,
+  .score-in::-webkit-inner-spin-button { -webkit-appearance: none; }
+  .score-in::placeholder { color: #c8c5bc; }
+  .score-in:focus {
+    outline: none; background: #fff;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(37,99,168,.12);
+  }
+
+  .card-live {
+    display: none; align-items: center; justify-content: space-between;
+    padding: 8px 16px 12px; border-top: 1px solid var(--border);
+    font-size: .7rem; color: var(--muted); gap: 8px;
+  }
+  .card-live.on { display: flex; }
+  .live-val {
+    font-family: 'Instrument Serif', serif;
+    font-style: italic; font-size: 1.05rem;
+  }
+  .live-val.pass { color: var(--pass); }
+  .live-val.fail { color: var(--fail); }
+
+  /* Floating button */
+  .btn-bar {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: linear-gradient(to top, var(--bg) 68%, transparent);
+    padding: 20px 16px calc(20px + env(safe-area-inset-bottom, 0px));
+    display: flex; justify-content: center;
+    z-index: 100; pointer-events: none;
+  }
+  .calc-btn {
+    background: var(--ink); border: none; border-radius: 50px;
+    color: #fff; cursor: pointer;
+    font-family: 'Geist Mono', monospace;
+    font-size: clamp(.84rem,2.5vw,.94rem);
+    font-weight: 600; letter-spacing: .3px;
+    padding: clamp(14px,3vw,17px) clamp(30px,8vw,52px);
+    box-shadow: 0 4px 20px rgba(0,0,0,.18), 0 1px 4px rgba(0,0,0,.12);
+    transition: transform .15s, box-shadow .15s, background .15s;
+    pointer-events: all; min-height: 52px; min-width: 200px;
+  }
+  .calc-btn:hover  { background:#2a2826; transform:translateY(-2px); box-shadow:0 8px 28px rgba(0,0,0,.22); }
+  .calc-btn:active { transform:scale(.97); }
+
+  /* Results */
+  #results { display: none; margin-top: 32px; }
+  #results.on { display: block; animation: rise .4s ease both; }
+
+  .outcome {
+    border-radius: var(--r);
+    padding: clamp(22px,5vw,36px) clamp(18px,5vw,30px);
+    margin-bottom: 12px;
+  }
+  .outcome.pass { background: var(--pass-bg); border: 1px solid #b8e4cc; }
+  .outcome.fail { background: var(--fail-bg); border: 1px solid #f0c8c8; }
+
+  .out-lbl {
+    font-size: .6rem; font-weight: 600;
+    letter-spacing: 2px; text-transform: uppercase; margin-bottom: 6px;
+  }
+  .outcome.pass .out-lbl { color: var(--pass); }
+  .outcome.fail .out-lbl { color: var(--fail); }
+
+  .out-score {
+    font-family: 'Instrument Serif', serif;
+    font-size: clamp(3.5rem,14vw,5.5rem);
+    font-style: italic; font-weight: 400;
+    line-height: 1; letter-spacing: -2px;
+  }
+  .outcome.pass .out-score { color: var(--pass); }
+  .outcome.fail .out-score { color: var(--fail); }
+
+  .out-msg {
+    font-family: 'Instrument Serif', serif;
+    font-style: italic;
+    font-size: clamp(.95rem,3vw,1.15rem);
+    line-height: 1.5; margin-top: 12px; max-width: 480px;
+  }
+  .outcome.pass .out-msg { color: #175c38; }
+  .outcome.fail .out-msg { color: #8a2020; }
+
+  .out-sub { font-size: .7rem; color: var(--muted); margin-top: 10px; }
+
+  /* Breakdown */
+  .bdwn {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--r); box-shadow: var(--sh);
+    overflow: hidden; margin-bottom: 12px;
+  }
+  .bdwn-hdr {
+    display: grid; grid-template-columns: 1fr 44px 60px;
+    padding: 9px 16px; border-bottom: 1px solid var(--border);
+    font-size: .58rem; letter-spacing: 1.4px;
+    text-transform: uppercase; color: var(--muted); font-weight: 600;
+  }
+  .bdwn-row {
+    display: grid; grid-template-columns: 1fr 44px 60px;
+    padding: 11px 16px; border-bottom: 1px solid #f0ede8;
+    align-items: center; gap: 8px;
+    transition: background .12s;
+  }
+  .bdwn-row:last-child { border-bottom: none; }
+  .bdwn-row:hover { background: #faf9f6; }
+
+  .bd-name { font-size: clamp(.73rem,2vw,.81rem); line-height: 1.3; }
+  .bd-coef { font-size: .7rem; color: var(--muted); text-align: center; }
+  .bd-val  { font-size: .88rem; font-weight: 600; text-align: right; }
+  .bd-val.pass  { color: var(--pass); }
+  .bd-val.fail  { color: var(--fail); }
+  .bd-val.blank { color: #c8c5bc; font-weight: 400; }
+
+  .reset-btn {
+    display: block; width: 100%;
+    background: transparent; border: 1px solid var(--border);
+    border-radius: 8px; color: var(--muted); cursor: pointer;
+    font-family: 'Geist Mono', monospace; font-size: .74rem;
+    padding: 12px; transition: border-color .18s, color .18s; min-height: 44px;
+  }
+  .reset-btn:hover { border-color: var(--fail); color: var(--fail); }
+
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hdr">
+    <h1>Grade Calculator <em>· L2 S4</em></h1>
+    <div class="dot-live">auto-saved</div>
+  </div>
+</header>
+
+<main>
+  <p class="sec-label">Modules</p>
+  <div id="mod-wrap"></div>
+
+  <div id="results">
+    <p class="sec-label">Semester Result</p>
+    <div class="outcome" id="outcome">
+      <div class="out-lbl"   id="out-lbl"></div>
+      <div class="out-score" id="out-score"></div>
+      <div class="out-msg"   id="out-msg"></div>
+      <div class="out-sub"   id="out-sub"></div>
+    </div>
+    <div class="bdwn">
+      <div class="bdwn-hdr">
+        <span>Module</span>
+        <span style="text-align:center">Coef</span>
+        <span style="text-align:right">Score</span>
+      </div>
+      <div id="bdwn-rows"></div>
+    </div>
+    <button class="reset-btn" onclick="resetAll()">↺ Clear all scores</button>
+  </div>
+</main>
+
+<div class="btn-bar">
+  <button class="calc-btn" onclick="calculate()">Calculate my average →</button>
+</div>
+
+<script>
+// ── To rename a module, change its "name" field below ──
+// ── examOnly:true = exam 100% | false = exam 60% + TD 40% ──
+var MODULES = [
+  { id:"tao",   name:"Traduction Assistée Par Ordinator (Ben Aidja)", coef:1, examOnly:true  },
+  { id:"eco",   name:"Introduction to Economics (Naoui)",      coef:2, examOnly:true  },
+  { id:"pla3",  name:"Linguistic Improvement Arabic (Pr. Abiza)",        coef:2, examOnly:false },
+  { id:"plb3",  name:"Linguistic Improvement French (Dr. Badr)",        coef:1, examOnly:false },
+  { id:"plbp3", name:"Linguistic Improvement English (Pr. Beckouche)",       coef:1, examOnly:false },
+  { id:"tbbpb", name:"Translation French-English (Beckouche)",             coef:1, examOnly:false },
+  { id:"tab",   name:"Translation Fench-Arabic (Pr. Belkacem)",                coef:1, examOnly:false },
+  { id:"tba",   name:"Translation Arabic-French (Pr. Belkacem)",                coef:1, examOnly:false },
+  { id:"tabp",  name:"Translation English-Arabic (Pr. Benaicha)",               coef:1, examOnly:false },
+  { id:"tbpa",  name:"Translation Arabic-English (Pr. Benaicha",               coef:1, examOnly:false },
+  { id:"meth",  name:"Traductologie (Pr. Aina) ",        coef:3, examOnly:false },
+  { id:"trad",  name:"Metholodolgy (Pr. Beckouche)",                  coef:2, examOnly:false }
+];
+
+var KEY = "grc_l2s4_v1";
+
+var PASS_MSGS = [
+  "Stellar. You crossed the threshold — the work compounded.",
+  "Above 10. In thermodynamics, this is called a net energy gain.",
+  "Variance resolved in your favour. Well earned.",
+  "Signal detected above the noise floor. Congratulations.",
+  "Convergence achieved. The data points in your direction."
+];
+
+var FAIL_MSGS = [
+  "Below 10 — but every experiment yields useful data. Iterate.",
+  "Not this wave. The interference pattern can still shift.",
+  "A hypothesis disproved is still progress. Adjust and rerun.",
+  "The mean is against you this round. Means are adjustable.",
+  "Even Mendel had poor harvests. The next session is a new trial."
+];
+
+function loadData() {
+  try { return JSON.parse(localStorage.getItem(KEY)) || {}; }
+  catch(e) { return {}; }
+}
+
+function saveField(id, field, val) {
+  var d = loadData();
+  if (!d[id]) d[id] = {};
+  d[id][field] = val;
+  localStorage.setItem(KEY, JSON.stringify(d));
+}
+
+function getModAvg(id) {
+  var mod = null;
+  for (var i = 0; i < MODULES.length; i++) {
+    if (MODULES[i].id === id) { mod = MODULES[i]; break; }
+  }
+  var sv = loadData()[id] || {};
+  var ex = parseFloat(sv.exam);
+  if (mod.examOnly) return isNaN(ex) ? null : ex;
+  var td = parseFloat(sv.td);
+  if (isNaN(ex) && isNaN(td)) return null;
+  var e = isNaN(ex) ? 0 : ex;
+  var t = isNaN(td) ? 0 : td;
+  return e * 0.6 + t * 0.4;
+}
+
+function refreshCard(id) {
+  var avg  = getModAvg(id);
+  var live = document.getElementById("cl-" + id);
+  var val  = document.getElementById("cv-" + id);
+  if (!live || !val) return;
+  if (avg === null) { live.className = "card-live"; return; }
+  live.className = "card-live on";
+  val.textContent = avg.toFixed(2) + " /20";
+  val.className = "live-val " + (avg >= 10 ? "pass" : "fail");
+}
+
+function buildCards() {
+  var saved = loadData();
+  var wrap  = document.getElementById("mod-wrap");
+  wrap.innerHTML = "";
+
+  for (var i = 0; i < MODULES.length; i++) {
+    var mod = MODULES[i];
+    var sv  = saved[mod.id] || {};
+
+    var el = document.createElement("div");
+    el.className = "module-card";
+    el.style.animationDelay = (i * 0.03) + "s";
+
+    var tdBlock = "";
+    if (!mod.examOnly) {
+      tdBlock = '<div class="inp-group">'
+        + '<label>TD / CA <span class="w">40%</span></label>'
+        + '<input class="score-in" type="number" inputmode="decimal"'
+        + ' min="0" max="20" step="0.25" placeholder="/20"'
+        + ' value="' + (sv.td !== undefined ? sv.td : "") + '"'
+        + ' data-id="' + mod.id + '" data-field="td"/>'
+        + '</div>';
+    }
+
+    el.innerHTML = ''
+      + '<div class="card-top">'
+      +   '<div class="mod-name">' + mod.name + '</div>'
+      +   '<div class="coef-tag">&times;' + mod.coef + '</div>'
+      + '</div>'
+      + '<div class="card-inputs' + (mod.examOnly ? " solo" : "") + '">'
+      +   '<div class="inp-group">'
+      +     '<label>Exam <span class="w">' + (mod.examOnly ? "100%" : "60%") + '</span></label>'
+      +     '<input class="score-in" type="number" inputmode="decimal"'
+      +       ' min="0" max="20" step="0.25" placeholder="/20"'
+      +       ' value="' + (sv.exam !== undefined ? sv.exam : "") + '"'
+      +       ' data-id="' + mod.id + '" data-field="exam"/>'
+      +   '</div>'
+      +   tdBlock
+      + '</div>'
+      + '<div class="card-live" id="cl-' + mod.id + '">'
+      +   '<span>module avg</span>'
+      +   '<span class="live-val" id="cv-' + mod.id + '"></span>'
+      + '</div>';
+
+    wrap.appendChild(el);
+  }
+
+  var inputs = wrap.querySelectorAll(".score-in");
+  for (var j = 0; j < inputs.length; j++) {
+    inputs[j].addEventListener("input", function() {
+      saveField(this.dataset.id, this.dataset.field, this.value);
+      refreshCard(this.dataset.id);
+    });
+  }
+
+  for (var k = 0; k < MODULES.length; k++) {
+    refreshCard(MODULES[k].id);
+  }
+}
+
+function calculate() {
+  var wSum = 0, used = 0;
+  var rows = [];
+  var totalCoef = 0;
+
+  for (var i = 0; i < MODULES.length; i++) {
+    totalCoef += MODULES[i].coef;
+  }
+
+  for (var i = 0; i < MODULES.length; i++) {
+    var mod = MODULES[i];
+    var avg = getModAvg(mod.id);
+    rows.push({ mod: mod, avg: avg });
+    if (avg !== null) {
+      wSum += avg * mod.coef;
+      used += mod.coef;
+    }
+  }
+
+  var res = document.getElementById("results");
+  res.className = "on";
+  res.style.display = "block";
+  res.scrollIntoView({ behavior: "smooth", block: "start" });
+
+  var out      = document.getElementById("outcome");
+  var outLbl   = document.getElementById("out-lbl");
+  var outScore = document.getElementById("out-score");
+  var outMsg   = document.getElementById("out-msg");
+  var outSub   = document.getElementById("out-sub");
+  var bdRows   = document.getElementById("bdwn-rows");
+
+  if (used === 0) {
+    out.className = "outcome";
+    outLbl.textContent   = "No scores entered yet";
+    outScore.textContent = "—";
+    outMsg.textContent   = "";
+    outSub.textContent   = "";
+    bdRows.innerHTML     = "";
+    return;
+  }
+
+  var semAvg = wSum / used;
+  var pass   = semAvg >= 10;
+  var msgPool = pass ? PASS_MSGS : FAIL_MSGS;
+  var msg    = msgPool[Math.floor(Math.random() * msgPool.length)];
+  var missing = totalCoef - used;
+
+  out.className        = "outcome " + (pass ? "pass" : "fail");
+  outLbl.textContent   = pass ? "Passed ✓" : "Not yet ✗";
+  outScore.textContent = semAvg.toFixed(2);
+  outMsg.textContent   = msg;
+  outSub.textContent   = "Coefficients counted: " + used + "/" + totalCoef
+    + (missing > 0 ? "  ·  " + missing + " missing" : "");
+
+  var html = "";
+  for (var i = 0; i < rows.length; i++) {
+    var r    = rows[i];
+    var cls  = r.avg === null ? "blank" : (r.avg >= 10 ? "pass" : "fail");
+    var disp = r.avg === null ? "—" : r.avg.toFixed(2);
+    html += '<div class="bdwn-row">'
+      + '<div class="bd-name">' + r.mod.name + '</div>'
+      + '<div class="bd-coef">&times;' + r.mod.coef + '</div>'
+      + '<div class="bd-val ' + cls + '">' + disp + '</div>'
+      + '</div>';
+  }
+  bdRows.innerHTML = html;
+}
+
+function resetAll() {
+  if (!confirm("Clear all saved scores?")) return;
+  localStorage.removeItem(KEY);
+  document.getElementById("results").style.display = "none";
+  document.getElementById("results").className = "";
+  buildCards();
+}
+
+buildCards();
+</script>
+</body>
+</html>
